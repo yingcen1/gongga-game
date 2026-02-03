@@ -11,8 +11,7 @@ import {
   Wind,
   Thermometer,
   Zap,
-  ScrollText,
-  Mountain
+  ChevronRight
 } from 'lucide-react';
 
 const App = () => {
@@ -78,266 +77,289 @@ const App = () => {
     }));
   };
 
-  // --- 子界面渲染 ---
-
-  // 1. 前言界面
-  const IntroView = () => (
-    <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center p-6 overflow-y-auto">
-      <div className="max-w-2xl w-full space-y-8 py-12">
-        <div className="border-l-4 border-blue-600 pl-6 space-y-4">
-          <h1 className="text-4xl font-serif italic tracking-tighter">蜀山之王：贡嘎绝地</h1>
-          <p className="text-blue-400 text-xs tracking-[0.4em] font-bold">THE KING OF MOUNTAINS / SURVIVAL PROJECT</p>
-        </div>
-        
-        <div className="space-y-6 text-gray-400 leading-relaxed font-light">
-          <p>
-            这不只是一次徒步。在川西民间，贡嘎山被称为“磨子石”，它是众山之王，也是最危险的禁地。
-          </p>
-          <p>
-            半个月前，一支名为“北极星”的科考队在海拔5500米的冰川带失踪。你作为最有经验的向导，受命携带卫星链路设备独自进山搜寻。
-          </p>
-          <p className="text-white">
-            “记住，在贡嘎，最值钱的是你的体力和背包里的物资，而不是你兜里的钞票。”
-          </p>
-          <p>
-            你现在站在康定老榆林的进山路口。前方是无尽的冷杉林和随时可能降临的白毛风。
-          </p>
-        </div>
-
-        <button 
-          onClick={() => setGameState('prep')}
-          className="group flex items-center gap-4 text-blue-400 hover:text-white transition-colors pt-8"
-        >
-          <span className="text-sm tracking-[0.3em]">点火出发，去整备物资</span>
-          <ChevronRight className="group-hover:translate-x-2 transition-transform" size={20} />
-        </button>
+  const ProgressBar = ({ label, value, color, unit = "%" }) => (
+    <div className="mb-4">
+      <div className="flex justify-between text-xs mb-1">
+        <span className="text-blue-200 opacity-80">{label}</span>
+        <span className="text-white">{value}{unit}</span>
+      </div>
+      <div className="h-1.5 w-full bg-blue-900/30 overflow-hidden">
+        <div 
+          className={`h-full transition-all duration-500 ${color}`} 
+          style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+        />
       </div>
     </div>
   );
 
-  // 2. 整备/背包界面 (重构为强制流程)
-  const PrepView = () => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black">
-      <div className="relative w-full max-w-6xl bg-[#080a0c] border border-white/10 rounded-sm overflow-hidden flex flex-col md:flex-row shadow-2xl">
-        
-        <div className="w-full md:w-72 bg-[#0d1117] p-8 border-r border-white/5">
-          <h2 className="text-2xl font-serif mb-2">整备物资</h2>
-          <p className="text-[10px] tracking-widest text-blue-500 mb-8 uppercase font-bold">选个结实的包，带上保命的东西</p>
+  // --- 渲染逻辑 ---
+
+  // 1. 前言界面 (Intro)
+  if (gameState === 'intro') {
+    return (
+      <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center p-6 overflow-y-auto">
+        <div className="max-w-2xl w-full space-y-8 py-12">
+          <div className="border-l-4 border-blue-600 pl-6 space-y-4">
+            <h1 className="text-4xl font-serif italic tracking-tighter">蜀山之王：贡嘎绝地</h1>
+            <p className="text-blue-400 text-xs tracking-[0.4em] font-bold uppercase">The King of Mountains / Survival Project</p>
+          </div>
           
-          <div className="space-y-4">
-            {Object.entries(packs).map(([key, pack]) => (
-              <div 
-                key={key}
-                onClick={() => setCurrentPack(key)}
-                className={`p-4 cursor-pointer border transition-all ${currentPack === key ? 'border-blue-500 bg-blue-500/10' : 'border-white/5 hover:border-white/20'}`}
-              >
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm font-bold">{pack.name}</span>
-                  <span className="text-xs text-blue-400">{pack.limit}KG</span>
-                </div>
-                <div className="text-[10px] text-gray-500">价格: ￥{pack.price} · {pack.bonus}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-auto pt-12">
-            <div className="flex justify-between text-xs text-gray-500 mb-2">
-              <span>采购经费</span>
-              <span className={stats.money - totalCost < 2000 ? 'text-red-400' : 'text-green-400'}>
-                ￥ {stats.money - totalCost}
-              </span>
-            </div>
-            <div className="flex justify-between items-end">
-              <div className="text-xs text-gray-400">负重状态</div>
-              <div className="text-xl font-mono">
-                <span className={currentWeight > packs[currentPack].limit ? 'text-red-500' : 'text-blue-400'}>
-                  {currentWeight}
-                </span>
-                <span className="text-xs text-gray-600 ml-1">/ {packs[currentPack].limit} KG</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 p-8 overflow-y-auto max-h-[70vh]">
-          <div className="text-[10px] text-gray-600 tracking-[0.3em] mb-4 uppercase font-bold">物资采购清单</div>
-          <div className="space-y-2">
-            {inventory.map(item => (
-              <div key={item.id} className="group flex items-center justify-between p-4 bg-white/5 border border-transparent hover:border-blue-500/30 transition-all">
-                <div>
-                  <div className="text-sm font-medium">{item.name}</div>
-                  <div className="text-[10px] text-gray-500">{item.weight}KG · 单价￥{item.price}</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button onClick={() => updateItem(item.id, -1)} className="p-1 hover:text-blue-400"><Minus size={14} /></button>
-                  <span className="w-8 text-center font-mono text-sm">{item.count}</span>
-                  <button onClick={() => updateItem(item.id, 1)} className="p-1 hover:text-blue-400"><Plus size={14} /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="w-full md:w-80 bg-black/40 p-8 border-l border-white/5">
-          <div className="text-[10px] text-gray-600 tracking-[0.3em] mb-6 uppercase">身体预测</div>
-          <div className="space-y-6">
-            <div>
-              <div className="text-xs text-gray-500 mb-2 flex items-center gap-2">
-                <Wind size={12} /> 步子快慢 (负重影响)
-              </div>
-              <div className="text-lg font-mono text-green-400">
-                {(1 - (currentWeight / packs[currentPack].limit) * 0.5).toFixed(2)}x
-              </div>
-            </div>
-            <div className="pt-4 border-t border-white/5">
-              <div className="text-xs text-gray-400 leading-relaxed mb-4">
-                <p>建议：海拔每上升1000米，氧气会减少10%，千万别为了省钱不带氧气罐。</p>
-              </div>
-            </div>
+          <div className="space-y-6 text-gray-400 leading-relaxed font-light">
+            <p>
+              这不只是一次徒步。在川西民间，贡嘎山被称为“磨子石”，它是众山之王，也是最危险的禁地。
+            </p>
+            <p>
+              半个月前，一支名为“北极星”的科考队在海拔5500米的冰川带失踪。你作为最有经验的向导，受命携带卫星链路设备独自进山搜寻。
+            </p>
+            <p className="text-white">
+              “记住，在贡嘎，最值钱的是你的体力和背包里的物资，而不是你兜里的钞票。”
+            </p>
+            <p>
+              你现在站在康定老榆林的进山路口。前方是无尽的冷杉林和随时可能降临的白毛风。
+            </p>
           </div>
 
           <button 
-            disabled={currentWeight <= 0}
-            onClick={() => {
-              setGameState('play');
-              setView('main');
-              addLog("物资已点清。老榆林进山，祝好运。");
-            }}
-            className={`w-full mt-12 py-3 text-sm tracking-widest transition-colors ${
-              currentWeight <= 0 ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white'
-            }`}
+            onClick={() => setGameState('prep')}
+            className="group flex items-center gap-4 text-blue-400 hover:text-white transition-colors pt-8"
           >
-            {currentWeight <= 0 ? '还没选物资呢' : '收好包，出发！'}
+            <span className="text-sm tracking-[0.3em]">点火出发，去整备物资</span>
+            <ChevronRight className="group-hover:translate-x-2 transition-transform" size={20} />
           </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 
+  // 2. 整备阶段 (Prep)
+  if (gameState === 'prep') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4 md:p-12">
+        <div className="relative w-full max-w-6xl bg-[#080a0c] border border-white/10 rounded-sm overflow-hidden flex flex-col md:flex-row shadow-2xl">
+          
+          <div className="w-full md:w-72 bg-[#0d1117] p-8 border-r border-white/5">
+            <h2 className="text-2xl font-serif mb-2 text-white">整备物资</h2>
+            <p className="text-[10px] tracking-widest text-blue-500 mb-8 uppercase font-bold">选个结实的包，带上保命的东西</p>
+            
+            <div className="space-y-4">
+              {Object.entries(packs).map(([key, pack]) => (
+                <div 
+                  key={key}
+                  onClick={() => setCurrentPack(key)}
+                  className={`p-4 cursor-pointer border transition-all ${currentPack === key ? 'border-blue-500 bg-blue-500/10' : 'border-white/5 hover:border-white/20'}`}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm font-bold text-white">{pack.name}</span>
+                    <span className="text-xs text-blue-400">{pack.limit}KG</span>
+                  </div>
+                  <div className="text-[10px] text-gray-500">价格: ￥{pack.price} · {pack.bonus}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-auto pt-12">
+              <div className="flex justify-between text-xs text-gray-500 mb-2">
+                <span>采购经费</span>
+                <span className={stats.money - totalCost < 2000 ? 'text-red-400' : 'text-green-400'}>
+                  ￥ {stats.money - totalCost}
+                </span>
+              </div>
+              <div className="flex justify-between items-end">
+                <div className="text-xs text-gray-400 font-white">负重状态</div>
+                <div className="text-xl font-mono">
+                  <span className={currentWeight > packs[currentPack].limit ? 'text-red-500' : 'text-blue-400'}>
+                    {currentWeight}
+                  </span>
+                  <span className="text-xs text-gray-600 ml-1">/ {packs[currentPack].limit} KG</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 p-8 overflow-y-auto max-h-[70vh]">
+            <div className="text-[10px] text-gray-600 tracking-[0.3em] mb-4 uppercase font-bold">物资采购清单</div>
+            <div className="space-y-2 text-white">
+              {inventory.map(item => (
+                <div key={item.id} className="group flex items-center justify-between p-4 bg-white/5 border border-transparent hover:border-blue-500/30 transition-all">
+                  <div>
+                    <div className="text-sm font-medium">{item.name}</div>
+                    <div className="text-[10px] text-gray-500">{item.weight}KG · 单价￥{item.price}</div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => updateItem(item.id, -1)} className="p-1 hover:text-blue-400"><Minus size={14} /></button>
+                    <span className="w-8 text-center font-mono text-sm">{item.count}</span>
+                    <button onClick={() => updateItem(item.id, 1)} className="p-1 hover:text-blue-400"><Plus size={14} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="w-full md:w-80 bg-black/40 p-8 border-l border-white/5">
+            <div className="text-[10px] text-gray-600 tracking-[0.3em] mb-6 uppercase">身体预测</div>
+            <div className="space-y-6">
+              <div>
+                <div className="text-xs text-gray-500 mb-2 flex items-center gap-2">
+                  <Wind size={12} /> 步子快慢 (负重影响)
+                </div>
+                <div className="text-lg font-mono text-green-400">
+                  {(1 - (currentWeight / packs[currentPack].limit) * 0.5).toFixed(2)}x
+                </div>
+              </div>
+              <div className="pt-4 border-t border-white/5">
+                <div className="text-xs text-gray-400 leading-relaxed mb-4">
+                  <p>建议：海拔每上升1000米，氧气会减少10%，千万别为了省钱不带氧气罐。</p>
+                </div>
+              </div>
+            </div>
+
+            <button 
+              disabled={currentWeight <= 0}
+              onClick={() => {
+                setGameState('play');
+                addLog("物资已点清。老榆林进山，祝好运。");
+              }}
+              className={`w-full mt-12 py-3 text-sm tracking-widest transition-colors ${
+                currentWeight <= 0 ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white'
+              }`}
+            >
+              {currentWeight <= 0 ? '还没选物资呢' : '收好包，出发！'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. 核心游戏界面 (Play)
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-blue-500/30">
       
-      {/* 流程控制界面 */}
-      {gameState === 'intro' && <IntroView />}
-      {gameState === 'prep' && <PrepView />}
-
-      {/* 游戏主界面 */}
-      <div className={gameState === 'play' ? 'opacity-100' : 'opacity-0'}>
-        {/* 顶部状态栏 */}
-        <div className="relative h-64 md:h-80 w-full overflow-hidden">
-          <img 
-            src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000" 
-            className="w-full h-full object-cover opacity-60 grayscale-[0.2]"
-            alt="贡嘎雪山"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black" />
-          
-          <div className="absolute top-8 left-8 w-64">
-            <ProgressBar label="体能" value={stats.stamina} color="bg-blue-400" />
-            <ProgressBar label="体温" value={stats.temp} unit="°C" color="bg-cyan-400" />
-            <ProgressBar label="理智" value={stats.sanity} color="bg-blue-300" />
-            <ProgressBar label="血氧" value={stats.oxygen} color="bg-sky-400" />
-          </div>
-
-          <div className="absolute top-8 right-8 text-right bg-black/40 backdrop-blur-md p-4 border-r-2 border-blue-500">
-            <div className="text-[10px] tracking-widest text-blue-400 font-bold uppercase">当前海拔</div>
-            <div className="text-5xl font-serif italic">{stats.altitude}<span className="text-sm ml-1">M</span></div>
-            <div className="text-xs mt-1 opacity-60 tracking-tighter text-blue-200">贡嘎·冷杉林地</div>
-          </div>
+      {/* 顶部状态栏 */}
+      <div className="relative h-64 md:h-80 w-full overflow-hidden">
+        <img 
+          src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000" 
+          className="w-full h-full object-cover opacity-60 grayscale-[0.2]"
+          alt="贡嘎雪山"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black" />
+        
+        <div className="absolute top-8 left-8 w-64">
+          <ProgressBar label="体能" value={stats.stamina} color="bg-blue-400" />
+          <ProgressBar label="体温" value={stats.temp} unit="°C" color="bg-cyan-400" />
+          <ProgressBar label="理智" value={stats.sanity} color="bg-blue-300" />
+          <ProgressBar label="血氧" value={stats.oxygen} color="bg-sky-400" />
         </div>
 
-        {/* 日志区 */}
-        <div className="px-8 -mt-12 relative z-10">
-          <div className="bg-[#0a0c10] border border-white/5 p-6 min-h-[120px] shadow-2xl">
-            {logs.map((log, i) => (
-              <div key={i} className={`text-sm mb-1 ${i === 0 ? 'text-blue-400' : 'text-gray-500'}`}>
-                {log}
-              </div>
-            ))}
-          </div>
+        <div className="absolute top-8 right-8 text-right bg-black/40 backdrop-blur-md p-4 border-r-2 border-blue-500">
+          <div className="text-[10px] tracking-widest text-blue-400 font-bold uppercase">当前海拔</div>
+          <div className="text-5xl font-serif italic">{stats.altitude}<span className="text-sm ml-1">M</span></div>
+          <div className="text-xs mt-1 opacity-60 tracking-tighter text-blue-200">贡嘎·冷杉林地</div>
         </div>
-
-        {/* 交互按键 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-8 mt-6 pb-24">
-          <button 
-            onClick={() => {
-              addLog("深吸一口气，继续往山上挪。这腿是越来越酸了。");
-              setStats(s => ({ ...s, stamina: s.stamina - 5, altitude: s.altitude + 50 }));
-            }}
-            className="group relative border border-blue-900/50 bg-[#0d1117] hover:bg-blue-950/30 p-6 transition-all"
-          >
-            <div className="text-blue-400 mb-2 flex justify-center group-hover:scale-110 transition-transform">
-              <Navigation size={20} />
-            </div>
-            <div className="text-sm tracking-widest font-light text-blue-100">继续前进</div>
-            <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-blue-500 transition-all group-hover:w-full" />
-          </button>
-
-          <button 
-            onClick={() => setView('backpack')}
-            className="group relative border border-blue-900/50 bg-[#0d1117] hover:bg-blue-950/30 p-6 transition-all"
-          >
-            <div className="text-blue-400 mb-2 flex justify-center group-hover:scale-110 transition-transform">
-              <Backpack size={20} />
-            </div>
-            <div className="text-sm tracking-widest font-light text-blue-100">翻看背包</div>
-            <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-blue-500 transition-all group-hover:w-full" />
-          </button>
-
-          <button 
-            onClick={() => addLog("地不平，扎帐篷不安全，再往前走走吧。")}
-            className="group relative border border-blue-900/50 bg-[#0d1117] hover:bg-blue-950/30 p-6 transition-all"
-          >
-            <div className="text-blue-400 mb-2 flex justify-center group-hover:scale-110 transition-transform">
-              <Tent size={20} />
-            </div>
-            <div className="text-sm tracking-widest font-light text-blue-100">搭建帐篷</div>
-            <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-blue-500 transition-all group-hover:w-full" />
-          </button>
-
-          <button 
-            onClick={() => addLog("眯着眼瞅了瞅四周，发现北边那山坡上好像有串脚印。")}
-            className="group relative border border-blue-900/50 bg-[#0d1117] hover:bg-blue-950/30 p-6 transition-all"
-          >
-            <div className="text-blue-400 mb-2 flex justify-center group-hover:scale-110 transition-transform">
-              <Eye size={20} />
-            </div>
-            <div className="text-sm tracking-widest font-light text-blue-100">瞅瞅四周</div>
-            <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-blue-500 transition-all group-hover:w-full" />
-          </button>
-        </div>
-
-        {/* 游戏中查看背包 (非整备期) */}
-        {view === 'backpack' && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/90" onClick={() => setView('main')} />
-            <div className="relative w-full max-w-lg bg-[#0d1117] border border-blue-500/20 p-8">
-              <h3 className="text-xl mb-4">背包里的存货</h3>
-              <div className="space-y-4">
-                {inventory.filter(i => i.count > 0).map(item => (
-                  <div key={item.id} className="flex justify-between items-center border-b border-white/5 pb-2">
-                    <span className="text-sm">{item.name}</span>
-                    <span className="font-mono text-blue-400">x{item.count}</span>
-                  </div>
-                ))}
-              </div>
-              <button 
-                onClick={() => setView('main')}
-                className="w-full mt-8 border border-blue-500 text-blue-500 py-2 hover:bg-blue-500 hover:text-white transition-all"
-              >
-                收好背包
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
+      {/* 日志区 */}
+      <div className="px-8 -mt-12 relative z-10">
+        <div className="bg-[#0a0c10] border border-white/5 p-6 min-h-[120px] shadow-2xl">
+          {logs.map((log, i) => (
+            <div key={i} className={`text-sm mb-1 ${i === 0 ? 'text-blue-400' : 'text-gray-500'}`}>
+              {log}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 交互按键 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-8 mt-6 pb-24">
+        <button 
+          onClick={() => {
+            addLog("深吸一口气，继续往山上挪。这腿是越来越酸了。");
+            setStats(s => ({ ...s, stamina: Math.max(0, s.stamina - 5), altitude: s.altitude + 50 }));
+          }}
+          className="group relative border border-blue-900/50 bg-[#0d1117] hover:bg-blue-950/30 p-6 transition-all"
+        >
+          <div className="text-blue-400 mb-2 flex justify-center group-hover:scale-110 transition-transform">
+            <Navigation size={20} />
+          </div>
+          <div className="text-sm tracking-widest font-light text-blue-100">继续前进</div>
+          <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-blue-500 transition-all group-hover:w-full" />
+        </button>
+
+        <button 
+          onClick={() => setView('backpack')}
+          className="group relative border border-blue-900/50 bg-[#0d1117] hover:bg-blue-950/30 p-6 transition-all"
+        >
+          <div className="text-blue-400 mb-2 flex justify-center group-hover:scale-110 transition-transform">
+            <Backpack size={20} />
+          </div>
+          <div className="text-sm tracking-widest font-light text-blue-100">翻看背包</div>
+          <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-blue-500 transition-all group-hover:w-full" />
+        </button>
+
+        <button 
+          onClick={() => addLog("地不平，扎帐篷不安全，再往前走走吧。")}
+          className="group relative border border-blue-900/50 bg-[#0d1117] hover:bg-blue-950/30 p-6 transition-all"
+        >
+          <div className="text-blue-400 mb-2 flex justify-center group-hover:scale-110 transition-transform">
+            <Tent size={20} />
+          </div>
+          <div className="text-sm tracking-widest font-light text-blue-100">搭建帐篷</div>
+          <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-blue-500 transition-all group-hover:w-full" />
+        </button>
+
+        <button 
+          onClick={() => addLog("眯着眼瞅了瞅四周，发现北边那山坡上好像有串脚印。")}
+          className="group relative border border-blue-900/50 bg-[#0d1117] hover:bg-blue-950/30 p-6 transition-all"
+        >
+          <div className="text-blue-400 mb-2 flex justify-center group-hover:scale-110 transition-transform">
+            <Eye size={20} />
+          </div>
+          <div className="text-sm tracking-widest font-light text-blue-100">瞅瞅四周</div>
+          <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-blue-500 transition-all group-hover:w-full" />
+        </button>
+      </div>
+
+      {/* 游戏中查看背包 (Modal Overlay) */}
+      {view === 'backpack' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setView('main')} />
+          <div className="relative w-full max-w-lg bg-[#0d1117] border border-blue-500/20 p-8 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-serif italic text-white">背包里的存货</h3>
+              <button onClick={() => setView('main')} className="text-gray-500 hover:text-white"><X size={20} /></button>
+            </div>
+            <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
+              {inventory.filter(i => i.count > 0).length > 0 ? (
+                inventory.filter(i => i.count > 0).map(item => (
+                  <div key={item.id} className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="text-sm text-gray-300">{item.name}</span>
+                    <span className="font-mono text-blue-400">x{item.count}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-gray-500 italic">包里空荡荡的...</div>
+              )}
+            </div>
+            <div className="mt-8 pt-4 border-t border-white/5 flex justify-between items-center">
+              <div className="text-xs text-gray-500">当前总负重</div>
+              <div className="text-sm font-mono text-blue-400">{currentWeight} / {packs[currentPack].limit} KG</div>
+            </div>
+            <button 
+              onClick={() => setView('main')}
+              className="w-full mt-8 border border-blue-500/50 text-blue-400 py-2 hover:bg-blue-500 hover:text-white transition-all text-xs tracking-widest"
+            >
+              收好背包
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 底部点缀 */}
       <div className="fixed bottom-8 right-8 flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full border border-blue-500/50 overflow-hidden bg-black/80 flex items-center justify-center group cursor-pointer hover:border-blue-400">
+        <div className="h-12 w-12 rounded-full border border-blue-500/50 overflow-hidden bg-black/80 flex items-center justify-center group cursor-pointer hover:border-blue-400 transition-all">
            <Zap size={20} className="text-blue-400 group-hover:scale-125 transition-transform" />
         </div>
       </div>
-
     </div>
   );
 };
