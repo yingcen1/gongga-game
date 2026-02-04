@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>蜀山之王：贡嘎绝地</title>
-    <!-- 使用 Tailwind CSS 进行布局 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide 图标库 -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
@@ -45,7 +43,23 @@
             -webkit-backdrop-filter: blur(12px);
         }
         
-        /* 自定义滚动条 */
+        .action-btn {
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            background: rgba(16, 185, 129, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .action-btn:hover:not(:disabled) {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); }
@@ -53,12 +67,11 @@
 </head>
 <body class="h-screen w-screen flex flex-col">
 
-    <!-- 粒子背景 -->
     <canvas id="snowCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-50"></canvas>
     <div class="scanline"></div>
 
-    <!-- 开始界面 -->
-    <div id="introScreen" class="fixed inset-0 z-50 bg-[#020a08] flex items-center justify-center p-6">
+    <!-- 1. 开始界面 -->
+    <div id="introScreen" class="fixed inset-0 z-50 bg-[#020a08] flex items-center justify-center p-6 text-center md:text-left">
         <div class="max-w-2xl w-full space-y-12">
             <div class="space-y-4 border-l-4 border-emerald-500 pl-8">
                 <h1 class="text-5xl font-bold italic tracking-tighter">蜀山之王：贡嘎绝地</h1>
@@ -67,43 +80,43 @@
             <p class="text-lg font-light opacity-80 leading-relaxed">
                 海拔是唯一的法律，氧气是昂贵的仁慈。作为向导，你能带他们翻越死亡垭口吗？
             </p>
-            <button onclick="showPrep()" class="flex items-center gap-4 text-emerald-400 hover:text-white transition-all group">
-                <span class="text-sm tracking-[0.4em] font-bold">进入整备点</span>
+            <button onclick="showPrep()" class="flex items-center gap-4 text-emerald-400 hover:text-white transition-all group mx-auto md:mx-0">
+                <span class="text-sm tracking-[0.4em] font-bold">进入整备点 ENTER CAMP</span>
                 <i data-lucide="chevron-right" class="group-hover:translate-x-2 transition-transform"></i>
             </button>
         </div>
     </div>
 
-    <!-- 整备界面 -->
+    <!-- 2. 整备界面 -->
     <div id="prepScreen" class="hidden fixed inset-0 z-50 bg-[#040d0b] flex items-center justify-center p-4">
         <div class="w-full max-w-5xl h-[85vh] bg-[#061411] border border-white/5 flex flex-col md:flex-row shadow-2xl overflow-hidden rounded-lg pixel-border">
             <!-- 左侧：背包选择 -->
-            <div class="w-full md:w-80 bg-black/40 p-8 border-r border-white/5 space-y-8">
-                <section class="space-y-4">
-                    <h3 class="text-[10px] font-black tracking-widest text-emerald-500/60 uppercase">选择背包</h3>
-                    <div id="packList" class="space-y-3">
-                        <!-- JS 注入 -->
-                    </div>
+            <div class="w-full md:w-80 bg-black/40 p-8 border-r border-white/5 space-y-8 flex flex-col">
+                <section class="space-y-4 flex-1">
+                    <h3 class="text-[10px] font-black tracking-widest text-emerald-500/60 uppercase">选择背包 SELECT PACK</h3>
+                    <div id="packList" class="space-y-3"></div>
                 </section>
-                <div class="pt-8 border-t border-white/5">
-                    <div class="text-3xl italic text-emerald-400 font-bold">
-                        <span id="currentWeightDisp">0.0</span>
-                        <span class="text-xs ml-1 opacity-40">/ <span id="weightLimitDisp">25</span>kg</span>
+                <div class="pt-8 border-t border-white/5 space-y-4">
+                    <div>
+                        <div class="text-3xl italic text-emerald-400 font-bold">
+                            <span id="currentWeightDisp">0.0</span>
+                            <span class="text-xs ml-1 opacity-40">/ <span id="weightLimitDisp">25</span>kg</span>
+                        </div>
+                        <div class="text-[10px] opacity-40 mt-1 uppercase">当前载重 LOAD WEIGHT</div>
                     </div>
-                    <div class="text-[10px] opacity-40 mt-2">资金余额: ￥<span id="moneyDisp">20000</span></div>
+                    <div class="text-xs opacity-60">资金余额: ￥<span id="moneyDisp" class="font-mono">20000</span></div>
+                    <button id="startBtn" onclick="startGame()" disabled class="w-full py-4 bg-emerald-600 text-[10px] tracking-[0.5em] font-black rounded-sm disabled:opacity-20 transition-opacity uppercase">踏入雪线 DEPLOY</button>
                 </div>
-                <button id="startBtn" onclick="startGame()" disabled class="w-full py-4 bg-emerald-600 text-[10px] tracking-[0.5em] font-black rounded-sm disabled:opacity-20 transition-opacity">踏入雪线</button>
             </div>
             <!-- 右侧：物品选购 -->
             <div class="flex-1 p-8 overflow-y-auto bg-black/20">
-                <div id="itemList" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <!-- JS 注入 -->
-                </div>
+                <h3 class="text-[10px] font-black tracking-widest text-emerald-500/60 uppercase mb-6">补给清单 SUPPLY LIST</h3>
+                <div id="itemList" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
             </div>
         </div>
     </div>
 
-    <!-- 游戏主界面 -->
+    <!-- 3. 游戏主界面 -->
     <div id="gameScreen" class="hidden flex-1 flex flex-col">
         <!-- 头部视觉 -->
         <div class="h-[45vh] relative flex-shrink-0 border-b border-white/5 overflow-hidden">
@@ -113,36 +126,36 @@
             <div class="absolute bottom-8 left-10 right-10 flex justify-between items-end z-20">
                 <!-- 状态栏 -->
                 <div class="w-72 space-y-5 bg-black/40 p-5 rounded-sm border border-white/10 blur-bg">
-                    <div class="stat-item" data-stat="stamina">
+                    <div class="stat-item">
                         <div class="flex justify-between text-[10px] mb-1">
-                            <span class="flex items-center gap-1 opacity-60"><i data-lucide="heart" class="w-3 text-emerald-500"></i> 体力</span>
+                            <span class="flex items-center gap-1 opacity-60 uppercase font-bold tracking-tighter"><i data-lucide="heart" class="w-3 text-emerald-500"></i> 体力 Stamina</span>
                             <span class="font-mono" id="stat-stamina">100%</span>
                         </div>
                         <div class="h-1 bg-white/5 rounded-full overflow-hidden">
-                            <div id="bar-stamina" class="h-full bg-emerald-500 transition-all duration-500" style="width: 100%"></div>
+                            <div id="bar-stamina" class="h-full bg-emerald-500 transition-all duration-500"></div>
                         </div>
                     </div>
-                    <div class="stat-item" data-stat="warmth">
+                    <div class="stat-item">
                         <div class="flex justify-between text-[10px] mb-1">
-                            <span class="flex items-center gap-1 opacity-60"><i data-lucide="thermometer" class="w-3 text-cyan-400"></i> 体温</span>
+                            <span class="flex items-center gap-1 opacity-60 uppercase font-bold tracking-tighter"><i data-lucide="thermometer" class="w-3 text-cyan-400"></i> 体温 Temp</span>
                             <span class="font-mono" id="stat-warmth">37.0°C</span>
                         </div>
                         <div class="h-1 bg-white/5 rounded-full overflow-hidden">
-                            <div id="bar-warmth" class="h-full bg-cyan-400 transition-all duration-500" style="width: 100%"></div>
+                            <div id="bar-warmth" class="h-full bg-cyan-400 transition-all duration-500"></div>
                         </div>
                     </div>
-                    <div class="stat-item" data-stat="oxygen">
+                    <div class="stat-item">
                         <div class="flex justify-between text-[10px] mb-1">
-                            <span class="flex items-center gap-1 opacity-60"><i data-lucide="zap" class="w-3 text-sky-500"></i> 氧气</span>
+                            <span class="flex items-center gap-1 opacity-60 uppercase font-bold tracking-tighter"><i data-lucide="zap" class="w-3 text-sky-500"></i> 氧气 Oxygen</span>
                             <span class="font-mono" id="stat-oxygen">100%</span>
                         </div>
                         <div class="h-1 bg-white/5 rounded-full overflow-hidden">
-                            <div id="bar-oxygen" class="h-full bg-sky-500 transition-all duration-500" style="width: 100%"></div>
+                            <div id="bar-oxygen" class="h-full bg-sky-500 transition-all duration-500"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 海拔 -->
+                <!-- 海拔显示 -->
                 <div class="text-right">
                     <div class="text-[10px] tracking-[0.6em] text-emerald-500 font-black uppercase">Altitude</div>
                     <div id="altitudeDisp" class="text-8xl font-bold italic tracking-tighter leading-none">2642</div>
@@ -152,108 +165,108 @@
         </div>
 
         <!-- 交互与日志 -->
-        <div class="flex-1 max-w-6xl w-full mx-auto px-10 py-8 flex gap-8">
-            <div class="flex-1 bg-black/40 border border-white/5 p-6 rounded-sm flex flex-col pixel-border blur-bg">
-                <div class="text-[8px] text-emerald-500/40 tracking-[0.5em] font-black uppercase mb-4 border-b border-emerald-500/10 pb-2">Mission Log</div>
-                <div id="logContainer" class="flex-1 space-y-2 overflow-y-auto pr-2">
-                    <!-- 日志内容 -->
+        <div class="flex-1 max-w-6xl w-full mx-auto px-6 py-6 flex flex-col gap-4 overflow-hidden">
+            <!-- 日志区 -->
+            <div class="flex-1 bg-black/40 border border-white/5 p-4 rounded-sm flex flex-col pixel-border blur-bg overflow-hidden">
+                <div class="text-[8px] text-emerald-500/40 tracking-[0.5em] font-black uppercase mb-3 border-b border-emerald-500/10 pb-1 flex justify-between">
+                    <span>Mission Log / 实时任务日志</span>
+                    <span id="loadIndicator" class="animate-pulse">SYSTEM ONLINE</span>
                 </div>
+                <div id="logContainer" class="flex-1 space-y-2 overflow-y-auto pr-2"></div>
             </div>
 
-            <!-- 控制面板 -->
-            <div class="w-80 grid grid-cols-2 gap-4">
-                <button onclick="handleMove()" class="flex flex-col items-center justify-center border border-emerald-500/40 p-4 transition-all rounded-sm gap-2 hover:bg-emerald-500/10 text-emerald-400">
+            <!-- 控制面板：横向四列 -->
+            <div class="grid grid-cols-4 gap-4 h-24 flex-shrink-0">
+                <button onclick="handleMove()" class="action-btn flex flex-col items-center justify-center rounded-sm gap-2 text-emerald-400">
                     <i data-lucide="navigation" class="w-6 h-6"></i>
-                    <span class="text-[9px] font-black tracking-widest">前进</span>
+                    <span class="text-[10px] font-black tracking-widest uppercase">前进 PUSH</span>
                 </button>
-                <button onclick="toggleBackpack()" class="flex flex-col items-center justify-center border border-white/10 p-4 transition-all rounded-sm gap-2 hover:bg-white/5">
+                <button onclick="toggleBackpack()" class="action-btn flex flex-col items-center justify-center rounded-sm gap-2">
                     <i data-lucide="backpack" class="w-6 h-6"></i>
-                    <span class="text-[9px] font-black tracking-widest">背囊</span>
+                    <span class="text-[10px] font-black tracking-widest uppercase">背囊 LOAD</span>
                 </button>
-                <button onclick="handleRest()" class="flex flex-col items-center justify-center border border-white/10 p-4 transition-all rounded-sm gap-2 hover:bg-white/5">
+                <button onclick="handleRest()" class="action-btn flex flex-col items-center justify-center rounded-sm gap-2">
                     <i data-lucide="tent" class="w-6 h-6"></i>
-                    <span class="text-[9px] font-black tracking-widest">休息</span>
+                    <span class="text-[10px] font-black tracking-widest uppercase">休息 REST</span>
                 </button>
-                <button onclick="addLog('观察四周：云海在脚下翻滚。')" class="flex flex-col items-center justify-center border border-white/10 p-4 transition-all rounded-sm gap-2 hover:bg-white/5">
+                <button onclick="handleScan()" class="action-btn flex flex-col items-center justify-center rounded-sm gap-2">
                     <i data-lucide="eye" class="w-6 h-6"></i>
-                    <span class="text-[9px] font-black tracking-widest">观测</span>
+                    <span class="text-[10px] font-black tracking-widest uppercase">观测 SCAN</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- 背囊弹窗 -->
+    <!-- 弹窗组件（通用） -->
     <div id="backpackModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-6 backdrop-blur-xl">
         <div class="w-full max-w-md bg-[#061411] border border-white/10 p-8 pixel-border">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl italic font-bold">背囊清单</h3>
+                <h3 class="text-xl italic font-bold">背囊清单 LOADOUT</h3>
                 <button onclick="toggleBackpack()"><i data-lucide="x" class="opacity-40 hover:opacity-100"></i></button>
             </div>
-            <div id="backpackList" class="space-y-3 max-h-96 overflow-y-auto">
-                <!-- 动态内容 -->
-            </div>
+            <div id="backpackList" class="space-y-3 max-h-96 overflow-y-auto"></div>
         </div>
     </div>
 
-    <!-- 结算弹窗 -->
-    <div id="endScreen" class="hidden fixed inset-0 z-[200] bg-black flex items-center justify-center p-10 text-center">
-        <div class="space-y-8">
-            <h2 id="endStatus" class="text-6xl font-bold italic"></h2>
-            <p id="endSub" class="opacity-40 italic tracking-widest uppercase text-xs"></p>
-            <button onclick="location.reload()" class="px-12 py-4 border border-emerald-500 text-emerald-500 text-[10px] font-black tracking-widest uppercase hover:bg-emerald-500 hover:text-white transition-all">重新契约</button>
-        </div>
-    </div>
-
-    <!-- 事件弹窗 -->
     <div id="eventModal" class="hidden fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-md p-6">
         <div class="max-w-sm w-full bg-[#061411] border border-white/10 rounded-sm overflow-hidden pixel-border">
             <img id="eventImg" src="" class="w-full h-40 object-cover" alt="事件">
             <div class="p-6 space-y-4">
                 <h4 id="eventTitle" class="text-lg italic font-bold text-emerald-400"></h4>
                 <p id="eventBody" class="text-xs opacity-60 leading-relaxed italic"></p>
-                <button onclick="closeEvent()" class="w-full py-3 bg-emerald-600 text-[10px] font-black uppercase tracking-widest">确认</button>
+                <button onclick="closeEvent()" class="w-full py-3 bg-emerald-600 text-[10px] font-black uppercase tracking-widest">确认 ACKNOWLEDGE</button>
             </div>
         </div>
     </div>
 
+    <div id="endScreen" class="hidden fixed inset-0 z-[200] bg-black flex items-center justify-center p-10 text-center">
+        <div class="space-y-8">
+            <h2 id="endStatus" class="text-6xl font-bold italic uppercase tracking-tighter"></h2>
+            <p id="endSub" class="opacity-40 italic tracking-widest uppercase text-xs"></p>
+            <button onclick="location.reload()" class="px-12 py-4 border border-emerald-500 text-emerald-500 text-[10px] font-black tracking-widest uppercase hover:bg-emerald-500 hover:text-white transition-all">重新初始化 REBOOT</button>
+        </div>
+    </div>
+
     <script>
-        // --- 数据配置 ---
+        // --- 配置数据 ---
         const STAGES = [
-            { alt: 2600, name: "原始森林", img: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=1200", desc: "薄雾弥漫，泥土潮湿。" },
-            { alt: 3500, name: "红石滩", img: "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1200", desc: "河床铺满了鲜红的石头。" },
-            { alt: 4200, name: "碎石坡", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200", desc: "每走一步都会向下滑动。" },
-            { alt: 4750, name: "死亡垭口", img: "https://images.unsplash.com/photo-1434394354979-a235cd36269d?q=80&w=1200", desc: "贡嘎主峰近在咫尺。" }
+            { alt: 2600, name: "原始森林 Forest", img: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=1200" },
+            { alt: 3500, name: "红石滩 Red Stones", img: "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1200" },
+            { alt: 4200, name: "碎石坡 Scree", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200" },
+            { alt: 4750, name: "死亡垭口 Pass", img: "https://images.unsplash.com/photo-1434394354979-a235cd36269d?q=80&w=1200" }
         ];
 
         const PACKS = {
-            ul: { id: 'ul', name: 'UL轻量包', limit: 15, staminaBonus: 1.2, cost: 1200, icon: 'zap' },
+            ul: { id: 'ul', name: 'UL轻量包', limit: 15, staminaBonus: 1.25, cost: 1200, icon: 'zap' },
             std: { id: 'std', name: '标准徒步包', limit: 25, staminaBonus: 1.0, cost: 800, icon: 'backpack' },
-            heavy: { id: 'heavy', name: '重型远征包', limit: 40, staminaBonus: 0.7, cost: 1800, icon: 'tent' }
+            heavy: { id: 'heavy', name: '重型远征包', limit: 40, staminaBonus: 0.8, cost: 1800, icon: 'tent' }
         };
 
         const ITEMS = [
             { id: 'biscuit', name: '压缩饼干', weight: 0.5, price: 50, stamina: 15, warmth: 2, desc: '耐饿，口感极干' },
-            { id: 'choc', name: '黑巧克力', weight: 0.1, price: 120, stamina: 5, sanity: 10, warmth: 5, desc: '高能糖分' },
-            { id: 'oxy', name: '应急氧气罐', weight: 4.0, price: 4200, oxygen: 40, desc: '4000米上的命脉' },
-            { id: 'rice', name: '自热米饭', weight: 1.2, price: 150, stamina: 30, warmth: 15, desc: '热腾腾的治愈感' },
-            { id: 'med', name: '布洛芬', weight: 0.1, price: 600, oxygen: 5, warmth: 0, desc: '缓解轻微高反' },
-            { id: 'stick', name: '碳素登山杖', weight: 0.6, price: 1500, passive: true, desc: '减轻20%体力消耗' }
+            { id: 'choc', name: '黑巧克力', weight: 0.1, price: 120, stamina: 5, warmth: 5, desc: '快速提供热量' },
+            { id: 'oxy', name: '应急氧气罐', weight: 2.0, price: 1500, oxygen: 30, desc: '高海拔续命必备' },
+            { id: 'rice', name: '自热米饭', weight: 1.0, price: 180, stamina: 35, warmth: 20, desc: '奢侈的热量来源' },
+            { id: 'med', name: '抗高反药物', weight: 0.1, price: 800, oxygen: 10, warmth: 0, desc: '缓解缺氧症状' },
+            { id: 'stick', name: '登山杖', weight: 0.5, price: 1200, passive: true, desc: '常驻减缓体力消耗' }
         ];
 
-        // --- 游戏状态 ---
+        // --- 核心状态 ---
         let state = {
             stamina: 100,
             warmth: 37.0,
             oxygen: 100,
             altitude: 2642,
             money: 20000,
-            inventory: [], // [{id, count}]
-            selectedPack: PACKS.std
+            inventory: [],
+            selectedPack: PACKS.std,
+            gameActive: false
         };
 
         // --- 初始化 UI ---
         function initPrep() {
             const packList = document.getElementById('packList');
+            packList.innerHTML = '';
             Object.values(PACKS).forEach(p => {
                 const div = document.createElement('div');
                 div.className = `p-4 border cursor-pointer rounded-sm transition-all ${state.selectedPack.id === p.id ? 'border-emerald-500 bg-emerald-500/10' : 'border-white/5 hover:border-white/20'}`;
@@ -261,7 +274,7 @@
                 div.onclick = () => selectPack(p.id);
                 div.innerHTML = `
                     <div class="flex justify-between items-center text-sm font-bold">
-                        <span class="flex items-center gap-2"><i data-lucide="${p.icon}" class="w-4"></i> ${p.name}</span>
+                        <span class="flex items-center gap-2 uppercase tracking-tighter"><i data-lucide="${p.icon}" class="w-4"></i> ${p.name}</span>
                         <span class="text-emerald-400 font-mono">${p.limit}KG</span>
                     </div>
                 `;
@@ -269,13 +282,14 @@
             });
 
             const itemList = document.getElementById('itemList');
+            itemList.innerHTML = '';
             ITEMS.forEach(item => {
                 const div = document.createElement('div');
                 div.className = "p-4 bg-white/5 border border-white/5 flex justify-between items-center rounded-sm";
                 div.innerHTML = `
                     <div class="space-y-1">
                         <div class="text-sm font-bold">${item.name} <span class="text-[10px] font-normal opacity-40">${item.weight}kg</span></div>
-                        <div class="text-[10px] opacity-40">￥${item.price} — ${item.desc}</div>
+                        <div class="text-[10px] opacity-40 uppercase">￥${item.price} — ${item.desc}</div>
                     </div>
                     <div class="flex items-center bg-black/40 rounded-sm">
                         <button onclick="changeItemCount('${item.id}', -1)" class="p-2 hover:bg-white/5"><i data-lucide="minus" class="w-3"></i></button>
@@ -300,53 +314,41 @@
 
         function changeItemCount(id, delta) {
             const item = ITEMS.find(i => i.id === id);
-            const currentEntry = state.inventory.find(i => i.id === id);
-            const currentCount = currentEntry ? currentEntry.count : 0;
-            const newCount = Math.max(0, currentCount + delta);
-
-            // 检查预算和负重
+            let inv = state.inventory.find(i => i.id === id);
+            if (!inv) {
+                inv = { id, count: 0 };
+                state.inventory.push(inv);
+            }
+            
+            const newCount = Math.max(0, inv.count + delta);
             if (delta > 0) {
-                const weight = calculateWeight();
-                const cost = calculateTotalCost();
-                if (weight + item.weight > state.selectedPack.limit) return;
-                if (cost + item.price > state.money) return;
+                if (calculateWeight() + item.weight > state.selectedPack.limit) return;
+                if (calculateTotalCost() + item.price > state.money) return;
             }
-
-            if (currentEntry) {
-                currentEntry.count = newCount;
-            } else {
-                state.inventory.push({ id, count: newCount });
-            }
-
+            inv.count = newCount;
             document.getElementById(`count-${id}`).innerText = newCount;
             updatePrepStats();
         }
 
         function calculateWeight() {
-            return state.inventory.reduce((acc, inv) => {
-                const item = ITEMS.find(i => i.id === inv.id);
-                return acc + (item.weight * inv.count);
-            }, 0);
+            return state.inventory.reduce((acc, inv) => acc + (ITEMS.find(i => i.id === inv.id).weight * inv.count), 0);
         }
 
         function calculateTotalCost() {
-            const itemsCost = state.inventory.reduce((acc, inv) => {
-                const item = ITEMS.find(i => i.id === inv.id);
-                return acc + (item.price * inv.count);
-            }, 0);
+            const itemsCost = state.inventory.reduce((acc, inv) => acc + (ITEMS.find(i => i.id === inv.id).price * inv.count), 0);
             return itemsCost + state.selectedPack.cost;
         }
 
         function updatePrepStats() {
             const weight = calculateWeight();
-            const cost = calculateTotalCost();
+            const total = calculateTotalCost();
             document.getElementById('currentWeightDisp').innerText = weight.toFixed(1);
             document.getElementById('weightLimitDisp').innerText = state.selectedPack.limit;
-            document.getElementById('moneyDisp').innerText = (state.money - cost).toLocaleString();
+            document.getElementById('moneyDisp').innerText = (state.money - total).toLocaleString();
             document.getElementById('startBtn').disabled = weight === 0;
         }
 
-        // --- 核心逻辑 ---
+        // --- 逻辑执行 ---
         function showPrep() {
             document.getElementById('introScreen').classList.add('hidden');
             document.getElementById('prepScreen').classList.remove('hidden');
@@ -354,71 +356,76 @@
         }
 
         function startGame() {
+            state.gameActive = true;
             document.getElementById('prepScreen').classList.add('hidden');
             document.getElementById('gameScreen').classList.remove('hidden');
-            addLog("海拔2642米。贡嘎徒步正式开始。");
+            addLog("系统：卫星链路已接通。贡嘎向导协议激活。");
+            addLog(`当前装备：${state.selectedPack.name}，载重：${calculateWeight().toFixed(1)}kg。`);
             updateGameUI();
         }
 
         function addLog(msg) {
             const container = document.getElementById('logContainer');
-            const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             const div = document.createElement('div');
-            div.className = "text-[11px] font-mono border-l border-emerald-500/20 pl-2 py-1 transition-all duration-500";
-            div.innerHTML = `<span class="opacity-30 mr-2">${time}</span> ${msg}`;
+            const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+            div.className = "text-[11px] font-mono border-l border-emerald-500/20 pl-2 py-1 transition-all duration-500 animate-in fade-in slide-in-from-left-2";
+            div.innerHTML = `<span class="opacity-30 mr-2 text-[8px]">${time}</span> ${msg}`;
             container.prepend(div);
         }
 
         function updateGameUI() {
-            const currentStage = STAGES.findLast(s => state.altitude >= s.alt) || STAGES[0];
-            document.getElementById('stageImg').src = currentStage.img;
-            document.getElementById('stageNameDisp').innerText = currentStage.name;
+            const stage = STAGES.findLast(s => state.altitude >= s.alt) || STAGES[0];
+            document.getElementById('stageImg').src = stage.img;
+            document.getElementById('stageNameDisp').innerText = stage.name;
             document.getElementById('altitudeDisp').innerText = state.altitude;
 
-            // 状态条
-            document.getElementById('stat-stamina').innerText = `${Math.floor(state.stamina)}%`;
+            document.getElementById('stat-stamina').innerText = `${Math.max(0, Math.floor(state.stamina))}%`;
             document.getElementById('bar-stamina').style.width = `${state.stamina}%`;
             
             document.getElementById('stat-warmth').innerText = `${state.warmth.toFixed(1)}°C`;
             const warmthPer = ((state.warmth - 30) / (37.5 - 30)) * 100;
-            document.getElementById('bar-warmth').style.width = `${Math.max(0, warmthPer)}%`;
+            document.getElementById('bar-warmth').style.width = `${Math.min(100, Math.max(0, warmthPer))}%`;
 
-            document.getElementById('stat-oxygen').innerText = `${Math.floor(state.oxygen)}%`;
+            document.getElementById('stat-oxygen').innerText = `${Math.max(0, Math.floor(state.oxygen))}%`;
             document.getElementById('bar-oxygen').style.width = `${state.oxygen}%`;
 
-            // 死亡检查
-            if (state.warmth < 31) endGame("失温症", "贡嘎的寒冷吞噬了你的意识。");
-            else if (state.stamina <= 0 && Math.random() > 0.8) endGame("精疲力竭", "你再也没有站起来。");
-            else if (state.altitude >= 4800) endGame("成功登顶", "蜀山之王，在云端向你俯首。");
+            checkConditions();
         }
 
         function handleMove() {
-            if (state.stamina < 10) { addLog("太累了，走不动了。"); return; }
+            if (!state.gameActive) return;
+            if (state.stamina < 5) { addLog("警告：身体机能过低，无法执行推进指令。"); return; }
             
             const hasStick = state.inventory.find(i => i.id === 'stick' && i.count > 0);
-            const stickBonus = hasStick ? 0.8 : 1.0;
-            const weightFactor = 1 + (calculateWeight() / state.selectedPack.limit) * 0.4;
+            const loadRatio = calculateWeight() / state.selectedPack.limit;
+            const difficulty = 1 + (state.altitude - 2600) / 4000;
             
-            const cost = 8 * stickBonus * weightFactor * (1/state.selectedPack.staminaBonus);
+            const cost = 10 * difficulty * (1.2 - (hasStick ? 0.2 : 0)) * (1 + loadRatio * 0.5) / state.selectedPack.staminaBonus;
             
             state.stamina -= cost;
-            state.altitude += Math.floor(Math.random() * 50 + 40);
-            state.warmth -= 0.1;
+            state.altitude += Math.floor(Math.random() * 80 + 50);
+            state.warmth -= (0.1 + loadRatio * 0.1);
             
             if (state.altitude > 3500) {
-                state.oxygen -= (state.altitude - 3500) / 400;
+                state.oxygen -= (state.altitude - 3500) / 500;
             }
 
-            addLog(Math.random() > 0.5 ? "向上攀登，石缝中寒风凛冽。" : "由于负重，你的脚步有些沉重。");
-            if (Math.random() > 0.85) triggerEvent();
+            addLog(`海拔升高。当前海拔：${state.altitude}m。体感温度下降。`);
+            if (Math.random() > 0.8) triggerEvent();
             updateGameUI();
         }
 
         function handleRest() {
+            if (!state.gameActive) return;
             state.stamina = Math.min(100, state.stamina + 20);
-            state.warmth = Math.min(37, state.warmth + 1.5);
-            addLog("在避风处扎营休息。体温小幅回升。");
+            state.warmth = Math.min(37.0, state.warmth + 1.5);
+            addLog("系统：进入静态休息模式。生命体征正在缓慢恢复。");
             updateGameUI();
+        }
+
+        function handleScan() {
+            addLog("雷达扫描中... 这里的空气非常稀薄，但视野极佳。");
+            addLog(`当前负重修正：${(calculateWeight() / state.selectedPack.limit * 100).toFixed(0)}% 指数。`);
         }
 
         function toggleBackpack() {
@@ -434,21 +441,21 @@
         function renderBackpack() {
             const list = document.getElementById('backpackList');
             list.innerHTML = '';
-            const itemsInPack = state.inventory.filter(i => i.count > 0);
-            if (itemsInPack.length === 0) {
-                list.innerHTML = '<div class="text-xs opacity-30 text-center py-8">空空如也</div>';
+            const items = state.inventory.filter(i => i.count > 0);
+            if (items.length === 0) {
+                list.innerHTML = '<div class="text-xs opacity-30 text-center py-8 italic uppercase tracking-widest">Load Empty</div>';
                 return;
             }
-            itemsInPack.forEach(inv => {
+            items.forEach(inv => {
                 const item = ITEMS.find(i => i.id === inv.id);
                 const div = document.createElement('div');
                 div.className = "p-4 bg-white/5 border border-white/5 flex justify-between items-center";
                 div.innerHTML = `
                     <div>
-                        <div class="text-sm font-bold">${item.name}</div>
-                        <div class="text-[10px] opacity-40">剩余: ${inv.count} | ${item.weight}kg</div>
+                        <div class="text-sm font-bold uppercase">${item.name}</div>
+                        <div class="text-[10px] opacity-40 uppercase">Stock: ${inv.count} | ${item.weight}kg</div>
                     </div>
-                    ${!item.passive ? `<button onclick="useItem('${item.id}')" class="px-4 py-1.5 bg-emerald-600 text-[10px] font-black rounded-sm">使用</button>` : `<span class="text-[10px] opacity-20">装备中</span>`}
+                    ${!item.passive ? `<button onclick="useItem('${item.id}')" class="px-6 py-2 bg-emerald-600 text-[10px] font-black rounded-sm hover:bg-emerald-500 transition-colors uppercase">Execute</button>` : `<span class="text-[10px] opacity-20 uppercase tracking-widest">Passive</span>`}
                 `;
                 list.appendChild(div);
             });
@@ -457,24 +464,25 @@
         function useItem(id) {
             const item = ITEMS.find(i => i.id === id);
             const inv = state.inventory.find(i => i.id === id);
-            if (inv.count > 0) {
+            if (inv && inv.count > 0) {
                 inv.count--;
                 if (item.stamina) state.stamina = Math.min(100, state.stamina + item.stamina);
                 if (item.warmth) state.warmth = Math.min(37.5, state.warmth + item.warmth);
                 if (item.oxygen) state.oxygen = Math.min(100, state.oxygen + item.oxygen);
-                addLog(`使用了 ${item.name}。`);
+                addLog(`指令：消耗 ${item.name}。体征数据已重置。`);
                 renderBackpack();
                 updateGameUI();
             }
         }
 
         function triggerEvent() {
-            const events = [
-                { title: "雪山之灵", body: "你遇到了一群岩羊。这种坚韧的生命给了你力量。", img: "https://images.unsplash.com/photo-1547721064-362023351b2f?q=80&w=800" },
-                { title: "冰裂缝", body: "脚下冰层发出令人不安的碎裂声。你吓出一身冷汗。", img: "https://images.unsplash.com/photo-1516939884455-1445c8652f83?q=80&w=800" },
-                { title: "日照金山", body: "云层散去，贡嘎主峰被染成绚烂的金红色。美景治愈了你的疲惫。", img: "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?q=80&w=800" }
+            const evs = [
+                { title: "暴风雪 Blizzard", body: "突如其来的强风夹杂冰晶。体温急剧下降。", img: "https://images.unsplash.com/photo-1418985991508-e47386d96a71?q=80&w=800", action: () => { state.warmth -= 2; state.stamina -= 5; } },
+                { title: "高山草甸 Meadow", body: "这里有一片避风的平原。你的心情变好了。", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=800", action: () => { state.stamina += 5; } },
+                { title: "落石警戒 Rockfall", body: "前方山体不稳定。为了绕路，你消耗了额外体力。", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=800", action: () => { state.stamina -= 10; } }
             ];
-            const ev = events[Math.floor(Math.random() * events.length)];
+            const ev = evs[Math.floor(Math.random() * evs.length)];
+            ev.action();
             document.getElementById('eventTitle').innerText = ev.title;
             document.getElementById('eventBody').innerText = ev.body;
             document.getElementById('eventImg').src = ev.img;
@@ -483,9 +491,18 @@
 
         function closeEvent() {
             document.getElementById('eventModal').classList.add('hidden');
+            updateGameUI();
+        }
+
+        function checkConditions() {
+            if (state.stamina <= 0) endGame("FAILURE", "心肺功能衰竭。你的徒步终结在雪线下。");
+            else if (state.warmth <= 32) endGame("CRITICAL", "重度失温。你的意识消散在冰冷的空气中。");
+            else if (state.oxygen <= 10) endGame("DEPRIVED", "严重缺氧。你倒在通往顶峰的台阶前。");
+            else if (state.altitude >= 4800) endGame("SUCCESS", "顶峰抵达。你在蜀山之王之巅俯瞰众山。");
         }
 
         function endGame(status, sub) {
+            state.gameActive = false;
             document.getElementById('endStatus').innerText = status;
             document.getElementById('endSub').innerText = sub;
             document.getElementById('endScreen').classList.remove('hidden');
@@ -495,44 +512,34 @@
         const canvas = document.getElementById('snowCanvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
-
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         class Snowflake {
             constructor() { this.reset(); }
             reset() {
                 this.x = Math.random() * canvas.width;
                 this.y = -10;
-                this.vy = Math.random() * 1.5 + 1;
-                this.vx = (Math.random() - 0.5) * 1;
+                this.vy = Math.random() * 2 + 1;
+                this.vx = (Math.random() - 0.5) * 1.5;
                 this.size = Math.random() * 2 + 1;
-                this.alpha = Math.random() * 0.5 + 0.2;
+                this.alpha = Math.random() * 0.6;
             }
             update() {
-                this.y += this.vy;
-                this.x += this.vx;
+                this.y += this.vy; this.x += this.vx;
                 if (this.y > canvas.height) this.reset();
             }
             draw() {
                 ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
             }
         }
-
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             particles.forEach(p => { p.update(); p.draw(); });
             requestAnimationFrame(animate);
         }
-
         window.addEventListener('resize', resize);
         resize();
-        particles = Array.from({length: 100}, () => new Snowflake());
+        particles = Array.from({length: 80}, () => new Snowflake());
         animate();
     </script>
 </body>
