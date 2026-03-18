@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蜀山之王：贡嘎绝地 - v2.7 Survival Fix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        :root {
+            --bg-deep: #010808; 
+            --emerald: #10b981;
+            --rose: #f43f5e;
+            --sky: #0ea5e9;
+            --indigo: #6366f1;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: #ecfdf5;
+            font-family: 'Noto Serif SC', serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .glass {
+            background: rgba(3, 15, 15, 0.9);
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            backdrop-filter: blur(40px);
+        }
+
+        .bar-transition {
+            transition: width 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
+        @keyframes danger-flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .danger-pulse { animation: danger-flicker 0.8s infinite; }
+
+        .btn-interact {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.2s;
+        }
+        .btn-interact:hover:not(:disabled) {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--emerald);
+            transform: translateY(-2px);
+        }
+
+        .close-btn-rect {
+            background: rgba(244, 63, 94, 0.1);
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            color: var(--rose);
+            transition: all 0.2s;
+        }
+        .close-btn-rect:hover {
+            background: var(--rose);
+            color: white;
+        }
+    </style>
+</head>
+<body class="flex flex-col">
+
+    <canvas id="snowCanvas" class="fixed inset-0 pointer-events-none z-10 opacity-40"></canvas>
+
+    <!-- 引导层 -->
+    <div id="startScreen" class="fixed inset-0 z-[100] bg-[#010808] flex items-center justify-center p-12 transition-opacity duration-1000">
+        <div class="max-w-4xl text-center space-y-12">
+            <h1 class="text-8xl font-black italic tracking-tighter text-white">贡嘎绝地<span class="text-emerald-500">.</span></h1>
+            <p class="text-emerald-500/40 text-sm tracking-[0.8em] font-serif uppercase underline underline-offset-8">V2.7 Hardcore Survival Logic</p>
+            <button onclick="enterPrep()" class="px-16 py-6 bg-emerald-600 rounded-full text-xs font-black tracking-[1em] uppercase hover:scale-105 transition-transform">初始化生存协议</button>
+        </div>
+    </div>
+
+    <!-- 战前筹备 -->
+    <div id="prepScreen" class="hidden fixed inset-0 z-[80] bg-[#010808] flex items-center justify-center p-8">
+        <div class="w-full max-w-7xl h-[85vh] flex gap-8">
+            <div class="w-[400px] flex flex-col justify-between p-10 glass rounded-[3rem]">
+                <div class="space-y-10">
+                    <div>
+                        <h2 class="text-4xl font-black italic text-white tracking-tighter">负重 Loadout</h2>
+                        <p class="text-[10px] text-emerald-500/60 tracking-widest uppercase font-mono mt-2">海拔越高，每一克都是负担</p>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="flex justify-between items-end">
+                            <span class="text-[10px] opacity-30 uppercase font-black">当前负重</span>
+                            <div id="weightVal" class="text-2xl font-mono">0.0 <span class="text-xs opacity-20">/ 20.0 KG</span></div>
+                        </div>
+                        <div class="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div id="weightBar" class="h-full bg-emerald-500 w-0 bar-transition"></div>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <span class="text-[10px] opacity-30 uppercase font-black">资金余额</span>
+                            <div id="moneyVal" class="text-xl font-mono text-emerald-400">￥16,000</div>
+                        </div>
+                    </div>
+                </div>
+                <button id="startBtn" onclick="startGame()" disabled class="w-full py-6 bg-emerald-600 rounded-3xl text-[11px] font-black tracking-[1em] uppercase disabled:opacity-10 transition-all">踏入荒野</button>
+            </div>
+            <div class="flex-1 glass rounded-[3.5rem] p-12 overflow-y-auto" id="shopGrid"></div>
+        </div>
+    </div>
+
+    <!-- 游戏主界面 -->
+    <div id="gameScreen" class="hidden flex-1 flex flex-col relative overflow-hidden">
+        <!-- 视觉背景 -->
+        <div class="h-[48vh] relative shrink-0">
+            <div id="bgImg" class="absolute inset-0 bg-cover bg-center transition-all duration-[8s]" style="background-image: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1600')"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-[#010808] via-transparent to-black/40"></div>
+            
+            <!-- 状态面板 -->
+            <div class="absolute inset-x-12 top-12 flex justify-between items-start">
+                <div class="w-80 space-y-4 p-8 glass rounded-[2.5rem] border-white/5 shadow-2xl">
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-[10px] font-black uppercase text-emerald-400">Stamina 体力 <span id="val-stamina">100</span>%</div>
+                        <div class="h-1 bg-white/5"><div id="bar-stamina" class="bar-transition bg-emerald-500 h-full"></div></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-[10px] font-black uppercase text-rose-400">Warmth 体温 <span id="val-warmth">37.0</span>°C</div>
+                        <div class="h-1 bg-white/5"><div id="bar-warmth" class="bar-transition bg-rose-500 h-full"></div></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-[10px] font-black uppercase text-indigo-400">Sanity 理智 <span id="val-sanity">100</span></div>
+                        <div class="h-1 bg-white/5"><div id="bar-sanity" class="bar-transition bg-indigo-500 h-full"></div></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-[10px] font-black uppercase text-sky-400">Oxygen 氧气 <span id="val-oxygen">100</span>%</div>
+                        <div class="h-1 bg-white/5"><div id="bar-oxygen" class="bar-transition bg-sky-500 h-full"></div></div>
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <div id="weatherBox" class="mb-4 text-emerald-400 flex items-center justify-end gap-2 text-[10px] font-black tracking-widest uppercase">
+                        <i data-lucide="sun" class="w-4"></i> Clear Sky
+                    </div>
+                    <div id="val-alt" class="text-[11rem] font-black italic tracking-tighter leading-none text-white drop-shadow-2xl">2642</div>
+                    <div id="val-loc" class="text-base font-black text-emerald-500 uppercase tracking-[0.5em] -mt-4">巴王海</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 交互区域 -->
+        <div class="flex-1 m-8 mt-0 p-12 glass rounded-[4rem] flex flex-col relative">
+            <div id="logArea" class="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none"></div>
+
+            <div class="flex-1 flex flex-col items-center justify-center text-center max-w-5xl mx-auto space-y-6">
+                <span id="phaseTag" class="text-[10px] text-emerald-500/40 tracking-[1.5em] font-black uppercase">Phase Sensing</span>
+                <p id="narrativeText" class="text-4xl text-white/95 font-serif italic leading-snug"></p>
+            </div>
+
+            <div class="grid grid-cols-4 gap-8 max-w-5xl w-full mx-auto pb-4">
+                <button onclick="actionAdvance()" class="btn-interact h-28 rounded-[2.5rem] flex flex-col items-center justify-center gap-2 text-emerald-400">
+                    <i data-lucide="move-up-right" class="w-8"></i>
+                    <span class="text-[10px] font-black uppercase tracking-widest">前进 Advance</span>
+                </button>
+                <button onclick="toggleCargo(true)" class="btn-interact h-28 rounded-[2.5rem] flex flex-col items-center justify-center gap-2 text-white/60">
+                    <i data-lucide="package" class="w-8"></i>
+                    <span class="text-[10px] font-black uppercase tracking-widest">背囊 Cargo</span>
+                </button>
+                <button onclick="actionBivouac()" class="btn-interact h-28 rounded-[2.5rem] flex flex-col items-center justify-center gap-2 text-amber-500">
+                    <i data-lucide="flame" class="w-8"></i>
+                    <span class="text-[10px] font-black uppercase tracking-widest">扎营 Bivouac</span>
+                </button>
+                <button onclick="togglePillars(true)" class="btn-interact h-28 rounded-[2.5rem] flex flex-col items-center justify-center gap-2 text-indigo-400">
+                    <i data-lucide="tent" class="w-8"></i>
+                    <span class="text-[10px] font-black uppercase tracking-widest">精神 Pillars</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统一弹窗模态层 -->
+    <div id="modalOverlay" class="hidden fixed inset-0 z-[200] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-12">
+        <div id="modalContent" class="w-full max-w-5xl glass rounded-[4rem] overflow-hidden relative border-white/5 shadow-2xl">
+            <!-- 动态内容插入点 -->
+        </div>
+    </div>
+
+    <!-- 结局 -->
+    <div id="endScreen" class="hidden fixed inset-0 z-[300] bg-[#010808] flex flex-col items-center justify-center text-center p-12">
+        <h2 id="endStatus" class="text-[15rem] font-black italic tracking-tighter leading-none mb-8 text-white">LOST</h2>
+        <p id="endDesc" class="text-3xl text-emerald-500/60 font-serif italic max-w-4xl px-12 leading-relaxed"></p>
+        <button onclick="location.reload()" class="mt-16 px-20 py-8 border border-emerald-500/20 text-emerald-500 text-xs font-black tracking-[1em] hover:bg-emerald-500 hover:text-white transition-all rounded-full uppercase">重置时间线</button>
+    </div>
+
+    <script>
+        const DB = {
+            ITEMS: [
+                { id: 'biscuit', name: '压缩饼干', weight: 0.5, price: 300, icon: '🍞', stam: 40, san: 2 },
+                { id: 'oxy', name: '便携氧气', weight: 1.5, price: 2000, icon: '🌬️', oxy: 70, san: 15 },
+                { id: 'ibu', name: '布洛芬', weight: 0.1, price: 600, icon: '💊', san: 20, oxy: 10 },
+                { id: 'warmer', name: '暖宝宝', weight: 0.2, price: 200, icon: '🔥', warm: 20 },
+                { id: 'choco', name: '高能巧克力', weight: 0.1, price: 400, icon: '🍫', stam: 25, san: 10 }
+            ],
+            STAGES: [
+                { alt: 2600, name: "巴王海原始森林", story: "青苔爬满了树干，湿冷渗透了冲锋衣。海拔还在安全范围内。", img: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=1600" },
+                { alt: 3700, name: "子梅村遗迹", story: "碎石坡开始变得陡峭，每一次呼吸都带上了冰冷的金属味。", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1600" },
+                { alt: 4500, name: "贡嘎寺雪线", story: "树木消失了。理智正在稀薄的空气中瓦解，风中隐约有梵音。", img: "https://images.unsplash.com/photo-1542332213-31f87348057f?q=80&w=1600" },
+                { alt: 5000, name: "子梅垭口终点", story: "你站在了世界之巅。贡嘎主峰就在面前，神灵触手可及。", img: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?q=80&w=1600" }
+            ],
+            WEATHER: {
+                clear: { name: "Sunny 晴朗", loss: 1.0, san: 0, icon: 'sun', color: 'text-emerald-400' },
+                snow: { name: "Blizzard 暴雪", loss: 5.5, san: -15, icon: 'wind', color: 'text-rose-500' }
+            }
+        };
+
+        let state = {
+            active: false,
+            alt: 2642,
+            money: 16000,
+            stamina: 100,
+            warmth: 37.0,
+            sanity: 100,
+            oxygen: 100,
+            inventory: [],
+            weather: DB.WEATHER.clear,
+            weightLimit: 20.0,
+            pillars: {
+                walkman: false,    // Walkman - 理智流失降低30%
+                polaroid: false,  // Polaroid - 求生意志
+                diary: false      // Diary - 人性维持
+            },
+            pillarBurst: false    // 求生意志爆发状态
+        };
+
+        // --- 初始化 & 商店 ---
+        window.onload = () => { lucide.createIcons(); initSnow(); };
+
+        function enterPrep() {
+            document.getElementById('startScreen').classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                document.getElementById('prepScreen').classList.remove('hidden');
+                renderShop();
+            }, 800);
+        }
+
+        function renderShop() {
+            const grid = document.getElementById('shopGrid');
+            grid.innerHTML = '<div class="col-span-2 text-[10px] opacity-20 tracking-[1em] mb-6 uppercase font-black">Supply Terminal / 物资终端</div>';
+            DB.ITEMS.forEach(it => {
+                const inv = state.inventory.find(i => i.id === it.id) || { count: 0 };
+                const div = document.createElement('div');
+                div.className = "p-8 glass rounded-[2.5rem] flex items-center justify-between border-white/5 hover:border-emerald-500/20 transition-all";
+                div.innerHTML = `
+                    <div class="flex items-center gap-6">
+                        <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-3xl">${it.icon}</div>
+                        <div>
+                            <div class="text-base font-bold text-white">${it.name}</div>
+                            <div class="text-[10px] opacity-40 uppercase font-mono">￥${it.price} | ${it.weight}KG</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 bg-black/40 px-5 py-3 rounded-full border border-white/5">
+                        <button onclick="modifyShop('${it.id}', -1)" class="text-emerald-500 hover:scale-125 transition-transform"><i data-lucide="minus" class="w-4"></i></button>
+                        <span class="text-sm font-mono w-6 text-center">${inv.count}</span>
+                        <button onclick="modifyShop('${it.id}', 1)" class="text-emerald-500 hover:scale-125 transition-transform"><i data-lucide="plus" class="w-4"></i></button>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+            updatePrepUI();
+            lucide.createIcons();
+        }
+
+        function modifyShop(id, delta) {
+            const it = DB.ITEMS.find(x => x.id === id);
+            let inv = state.inventory.find(x => x.id === id);
+            if(!inv) { inv = {id, count: 0}; state.inventory.push(inv); }
+            
+            const curW = state.inventory.reduce((s, i) => s + i.count * DB.ITEMS.find(x => x.id === i.id).weight, 0);
+            const curM = state.inventory.reduce((s, i) => s + i.count * DB.ITEMS.find(x => x.id === i.id).price, 0);
+
+            if(delta > 0 && (curW + it.weight > state.weightLimit || curM + it.price > 16000)) return;
+            inv.count = Math.max(0, inv.count + delta);
+            renderShop();
+        }
+
+        function updatePrepUI() {
+            const w = state.inventory.reduce((s, i) => s + i.count * DB.ITEMS.find(x => x.id === i.id).weight, 0);
+            const m = state.inventory.reduce((s, i) => s + i.count * DB.ITEMS.find(x => x.id === i.id).price, 0);
+            document.getElementById('weightVal').innerHTML = `${w.toFixed(1)} <span class="text-xs opacity-20">/ 20.0 KG</span>`;
+            document.getElementById('weightBar').style.width = `${(w/20)*100}%`;
+            document.getElementById('moneyVal').innerText = `￥${(16000 - m).toLocaleString()}`;
+            document.getElementById('startBtn').disabled = w < 2.0;
+        }
+
+        function startGame() {
+            state.active = true;
+            document.getElementById('prepScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            updateGameUI();
+            log("生命监控已激活。生存几率：12.5%。");
+        }
+
+        // --- 核心生存逻辑 ---
+        function actionAdvance() {
+            if(!state.active) return;
+
+            // 1. 计算难度系数 (降低消耗)
+            let altFactor = 1.0;
+            if(state.alt > 4800) altFactor = 2.0;
+            else if(state.alt > 4200) altFactor = 1.5;
+            else if(state.alt > 3500) altFactor = 1.2;
+            else if(state.alt > 3000) altFactor = 1.0;
+
+            // 2. 扣除数值 (降低消耗，更容易生存)
+            const staminaLoss = (5 * altFactor * state.weather.loss);
+            const warmthLoss = (0.2 * altFactor * (state.weather.name === 'Blizzard 暴雪' ? 3 : 1));
+            let sanityLoss = (2 * altFactor) + (state.weather.san * -1);
+
+            // Walkman 效果：理智流失降低 50%
+            if(state.pillars.walkman) {
+                sanityLoss = sanityLoss * 0.5;
+                log('🎧 Walkman：音乐让你保持冷静');
+            }
+
+            const oxygenLoss = (state.alt > 3500 ? 3 * altFactor : 1);
+
+            state.stamina = Math.max(0, state.stamina - staminaLoss);
+            state.warmth = Math.max(0, state.warmth - warmthLoss);
+            state.sanity = Math.max(0, state.sanity - (sanityLoss / 2));
+            state.oxygen = Math.max(0, state.oxygen - (oxygenLoss / 2));
+            state.alt += (40 + Math.random() * 60);
+
+            // 随机天气突变 (降低概率)
+            if(Math.random() > 0.92) {
+                state.weather = state.weather === DB.WEATHER.clear ? DB.WEATHER.snow : DB.WEATHER.clear;
+                log(`天气突变：${state.weather.name}`);
+            }
+
+            log(`推进成功：海拔攀升至 ${Math.floor(state.alt)}m`);
+            updateGameUI();
+        }
+
+        function actionBivouac() {
+            state.stamina = Math.min(100, state.stamina + 40);
+            state.warmth = Math.min(37.5, state.warmth + 8);
+
+            // Diary 效果：书写维持人性，扎营时理智恢复 +15（抵消扣理智后净+10）
+            if(state.pillars.diary) {
+                state.sanity = Math.min(100, Math.max(0, state.sanity + 15 - 5));
+                log('📓 Diary：你写下今天的记录，文字让你保持了人性。');
+            } else {
+                state.sanity = Math.max(0, state.sanity - 5); // 孤独感扣理智
+            }
+
+            log("扎营休整中。核心体温正在缓慢回升。");
+            updateGameUI();
+        }
+
+        // --- UI 交互控制 ---
+        function openModal(html) {
+            const overlay = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+            content.innerHTML = html;
+            overlay.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.add('hidden');
+        }
+
+        function toggleCargo(show) {
+            if(!show) return closeModal();
+            const invHtml = state.inventory.filter(i => i.count > 0).map(inv => {
+                const it = DB.ITEMS.find(x => x.id === inv.id);
+                return `
+                    <div class="p-10 glass rounded-[3rem] border border-white/5 flex items-center justify-between group hover:border-emerald-500/40 transition-all">
+                        <div class="flex items-center gap-8">
+                            <span class="text-6xl group-hover:scale-110 transition-transform">${it.icon}</span>
+                            <div>
+                                <div class="text-2xl font-black text-white italic">${it.name} <span class="text-emerald-500">x${inv.count}</span></div>
+                                <p class="text-[10px] opacity-40 uppercase tracking-widest mt-1">Weight: ${it.weight}KG / Unit</p>
+                            </div>
+                        </div>
+                        <button onclick="useItem('${it.id}')" class="px-10 py-5 bg-emerald-600/10 border border-emerald-500/20 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-emerald-600 hover:text-white transition-all">确认使用</button>
+                    </div>
+                `;
+            }).join('') || '<div class="col-span-2 py-40 text-center opacity-10 text-4xl italic uppercase font-black">Empty Cargo</div>';
+
+            const html = `
+                <div class="p-20 relative">
+                    <button onclick="closeModal()" class="absolute top-10 right-10 px-8 py-4 close-btn-rect rounded-2xl text-[10px] font-black tracking-widest uppercase flex items-center gap-2">
+                        <i data-lucide="x" class="w-4"></i> 返回荒野 [ESC]
+                    </button>
+                    <div class="mb-12">
+                        <h3 class="text-6xl font-black italic tracking-tighter uppercase">生存背囊 <span class="text-emerald-500">Inventory</span></h3>
+                        <div class="h-px bg-white/5 mt-6"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-8 max-h-[50vh] overflow-y-auto pr-4">${invHtml}</div>
+                </div>
+            `;
+            openModal(html);
+        }
+
+        function togglePillars(show) {
+            if(!show) return closeModal();
+
+            const walkmanCard = `<div class="p-10 glass rounded-[3rem] border border-white/5 flex items-center justify-between group hover:border-indigo-500/40 transition-all">
+                <div class="flex items-center gap-8">
+                    <i data-lucide="music" class="w-12 h-12 text-indigo-400"></i>
+                    <div>
+                        <div class="text-2xl font-black text-white italic">Walkman</div>
+                        <p class="text-[10px] opacity-40 uppercase tracking-widest mt-1">使用后理智 +35，前进时理智流失降低 30%</p>
+                    </div>
+                </div>
+                <button onclick="activatePillar('walkman')" class="px-10 py-5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-indigo-500 hover:text-white transition-all">使 用</button>
+            </div>`;
+
+            const polaroidCard = `<div class="p-10 glass rounded-[3rem] border border-white/5 flex items-center justify-between group hover:border-rose-500/40 transition-all">
+                <div class="flex items-center gap-8">
+                    <i data-lucide="camera" class="w-12 h-12 text-rose-400"></i>
+                    <div>
+                        <div class="text-2xl font-black text-white italic">Polaroid</div>
+                        <p class="text-[10px] opacity-40 uppercase tracking-widest mt-1">使用后理智 +50，理智归零前触发"求生意志"爆发</p>
+                    </div>
+                </div>
+                <button onclick="activatePillar('polaroid')" class="px-10 py-5 bg-rose-500/10 border border-rose-500/20 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-rose-500 hover:text-white transition-all">使 用</button>
+            </div>`;
+
+            const diaryCard = `<div class="p-10 glass rounded-[3rem] border border-white/5 flex items-center justify-between group hover:border-amber-500/40 transition-all">
+                <div class="flex items-center gap-8">
+                    <i data-lucide="pen-tool" class="w-12 h-12 text-amber-400"></i>
+                    <div>
+                        <div class="text-2xl font-black text-white italic">Diary</div>
+                        <p class="text-[10px] opacity-40 uppercase tracking-widest mt-1">使用后理智 +20，扎营时额外恢复 +10</p>
+                    </div>
+                </div>
+                <button onclick="activatePillar('diary')" class="px-10 py-5 bg-amber-500/10 border border-amber-500/20 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-amber-500 hover:text-white transition-all">使 用</button>
+            </div>`;
+
+            const html = `
+                <div class="p-20 relative">
+                    <button onclick="closeModal()" class="absolute top-10 right-10 px-8 py-4 close-btn-rect rounded-2xl text-[10px] font-black tracking-widest uppercase flex items-center gap-2">
+                        <i data-lucide="x" class="w-4"></i> 返回荒野 [ESC]
+                    </button>
+                    <div class="mb-12">
+                        <h3 class="text-6xl font-black italic tracking-tighter uppercase">精神支柱 <span class="text-indigo-400">Pillars</span></h3>
+                        <div class="h-px bg-white/5 mt-6"></div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-8 max-h-[50vh] overflow-y-auto pr-4">${walkmanCard}${polaroidCard}${diaryCard}</div>
+                    ${Object.values(state.pillars).some(v => v) ? '<div class="mt-8 text-center"><p class="text-xs text-indigo-400/60 tracking-widest uppercase">当前激活的精神支柱正在守护你</p></div>' : ''}
+                </div>
+            `;
+            openModal(html);
+        }
+
+        // 激活精神支柱 - 立即恢复理智并激活被动效果
+        function activatePillar(type) {
+            const pillarEffects = {
+                walkman: { san: 35, msg: '🎧 Walkman：音乐让你保持冷静，理智 +35' },
+                polaroid: { san: 50, msg: '📸 Polaroid：家人的笑脸给了你力量，理智 +50' },
+                diary: { san: 20, msg: '📓 Diary：写下此刻的心情，理智 +20' }
+            };
+
+            const effect = pillarEffects[type];
+
+            // 激活精神支柱
+            state.pillars[type] = true;
+            // 立即恢复理智
+            state.sanity = Math.min(100, state.sanity + effect.san);
+
+            log(`✨ ${effect.msg}`);
+            togglePillars(true); // 刷新界面
+            updateGameUI();
+        }
+
+        // 卸下精神支柱
+        function deactivatePillar(type) {
+            state.pillars[type] = false;
+            const names = { walkman: 'Walkman 播放器', polaroid: 'Polaroid 照片', diary: 'Diary 日记' };
+            log(`精神支柱已卸下：${names[type]}`);
+            togglePillars(true); // 刷新界面
+            updateGameUI();
+        }
+
+        // --- 核心辅助 ---
+        function useItem(id) {
+            const it = DB.ITEMS.find(x => x.id === id);
+            const inv = state.inventory.find(x => x.id === id);
+            if(inv && inv.count > 0) {
+                inv.count--;
+                if(it.stam) state.stamina = Math.min(100, state.stamina + it.stam);
+                if(it.san) state.sanity = Math.min(100, state.sanity + it.san);
+                if(it.warm) state.warmth = Math.min(37.5, state.warmth + it.warm);
+                if(it.oxy) state.oxygen = Math.min(100, state.oxygen + it.oxy);
+                log(`已使用：${it.name}`);
+                toggleCargo(true); // 刷新
+                updateGameUI();
+            }
+        }
+
+        function updateGameUI() {
+            const stage = DB.STAGES.findLast(s => state.alt >= s.alt) || DB.STAGES[0];
+            document.getElementById('val-loc').innerText = stage.name;
+            document.getElementById('val-alt').innerText = Math.floor(state.alt);
+            document.getElementById('narrativeText').innerText = stage.story;
+            document.getElementById('bgImg').style.backgroundImage = `url('${stage.img}')`;
+
+            const updateBar = (id, val, isTemp) => {
+                const realVal = isTemp ? Math.max(0, (val - 31) / 6.5 * 100) : val;
+                const bar = document.getElementById(`bar-${id}`);
+                bar.style.width = `${Math.max(0, Math.min(100, realVal))}%`;
+                document.getElementById(`val-${id}`).innerText = isTemp ? val.toFixed(1) : Math.ceil(val);
+                
+                if(val < (isTemp ? 34 : 20)) bar.classList.add('danger-pulse');
+                else bar.classList.remove('danger-pulse');
+            };
+
+            updateBar('stamina', state.stamina);
+            updateBar('warmth', state.warmth, true);
+            updateBar('sanity', state.sanity);
+            updateBar('oxygen', state.oxygen);
+
+            const wb = document.getElementById('weatherBox');
+            wb.innerHTML = `<i data-lucide="${state.weather.icon}" class="w-4"></i> ${state.weather.name}`;
+            wb.className = `mb-4 flex items-center justify-end gap-2 text-[10px] font-black tracking-widest uppercase ${state.weather.color}`;
+            
+            checkDead();
+            lucide.createIcons();
+        }
+
+        function checkDead() {
+            // 四个指标有一个到0才算死
+            console.log("检查死亡 - 体力:" + state.stamina + " 体温:" + state.warmth + " 理智:" + state.sanity + " 氧气:" + state.oxygen);
+
+            // 如果所有数值都大于0，不死，直接返回
+            if(state.stamina > 0 && state.warmth > 0 && state.sanity > 0 && state.oxygen > 0) {
+                // 检查是否到达终点
+                if(state.alt >= 5100 && state.active) {
+                    state.active = false;
+                    document.getElementById('endStatus').innerText = "ASCENDED";
+                    document.getElementById('endStatus').classList.replace('text-white', 'text-emerald-500');
+                    document.getElementById('endScreen').classList.remove('hidden');
+                    document.getElementById('endDesc').innerText = "你站上了子梅垭口。贡嘎主峰金色的光辉穿透了云层，你已战胜了自然，也战胜了自己。";
+                }
+                return;
+            }
+
+            // 有一个或多个数值<=0的情况
+
+            // Polaroid 求生意志效果：理智归零前触发一次爆发
+            if(state.sanity <= 0 && state.pillars.polaroid && !state.pillarBurst) {
+                state.sanity = 35;
+                state.pillarBurst = true;
+                state.pillars.polaroid = false;
+                log('📸 Polaroid：照片中家人的笑脸让你重新燃起求生意志！');
+                alert('📸 照片中家人的笑脸让你重新燃起求生意志！理智恢复至 35%');
+                return;
+            }
+
+            // 四个指标有一个到0就死
+            let msg = "你死了。";
+            if(state.stamina <= 0) msg = "体力耗尽！你倒在了雪地上，再也没能起来。";
+            else if(state.warmth <= 0) msg = "体温过低！你被冻僵在了雪山之中。";
+            else if(state.sanity <= 0) msg = "理智崩溃！你失去了意识，倒在了荒野中。";
+            else if(state.oxygen <= 0) msg = "缺氧窒息！你倒在了稀薄的空气中。";
+
+            state.active = false;
+            alert("游戏结束！\n\n" + msg);
+            document.getElementById('endScreen').classList.remove('hidden');
+            document.getElementById('endDesc').innerText = msg;
+        }
+
+        function log(msg) {
+            const area = document.getElementById('logArea');
+            const el = document.createElement('div');
+            el.className = "px-6 py-2 glass border border-white/10 rounded-full text-[10px] font-mono animate-in fade-in slide-in-from-bottom-2 text-emerald-400";
+            el.innerText = `>> SYSTEM: ${msg}`;
+            area.prepend(el);
+            setTimeout(() => el.remove(), 4000);
+        }
+
+        function initSnow() {
+            const canvas = document.getElementById('snowCanvas');
+            const ctx = canvas.getContext('2d');
+            let snow = [];
+            const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+            window.onresize = resize; resize();
+            for(let i=0; i<100; i++) snow.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.5+0.5, v: Math.random()*2+1, a: Math.random()*0.4 });
+            function loop() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                ctx.fillStyle = "white";
+                snow.forEach(p => {
+                    p.y += p.v; p.x += (Math.random()-0.5)*1;
+                    if(p.y > canvas.height) p.y = -10;
+                    ctx.globalAlpha = p.a;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+                });
+                requestAnimationFrame(loop);
+            }
+            loop();
+        }
+
+    </script>
+</body>
+</html>
