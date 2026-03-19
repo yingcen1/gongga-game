@@ -62,6 +62,63 @@
             background: var(--rose);
             color: white;
         }
+
+        /* 响应式设计 - 手机适配 */
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+            #startScreen, #prepScreen, #gameScreen {
+                padding: 1rem !important;
+            }
+            .text-8xl { font-size: 3rem !important; }
+            .text-6xl { font-size: 2rem !important; }
+            .text-4xl { font-size: 1.5rem !important; }
+            .text-2xl { font-size: 1.25rem !important; }
+            .p-20 { padding: 1rem !important; }
+            .p-12 { padding: 0.75rem !important; }
+            .p-10 { padding: 0.5rem !important; }
+            .gap-8 { gap: 0.5rem !important; }
+            .gap-4 { gap: 0.25rem !important; }
+            .rounded-\[3rem\] { border-radius: 1.5rem !important; }
+            .rounded-\[2\.5rem\] { border-radius: 1rem !important; }
+            .h-28 { height: 4rem !important; }
+            .w-12 { width: 2.5rem !important; }
+            .h-12 { height: 2.5rem !important; }
+            .grid-cols-3 { grid-template-columns: 1fr !important; }
+            .grid-cols-2 { grid-template-columns: 1fr !important; }
+            #gameArea {
+                flex-direction: column !important;
+            }
+            #statusPanel {
+                width: 100% !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+            }
+            #actionPanel {
+                width: 100% !important;
+            }
+            #bottomBar {
+                flex-wrap: wrap !important;
+            }
+            #modalContent {
+                max-width: 95vw !important;
+                max-height: 90vh !important;
+                overflow-y: auto !important;
+            }
+            .max-w-4xl { max-width: 95vw !important; }
+            .max-w-5xl { max-width: 95vw !important; }
+            button {
+                min-height: 44px;
+                min-width: 44px;
+            }
+        }
+
+        /* 平板适配 */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .text-6xl { font-size: 3rem !important; }
+            .p-20 { padding: 1.5rem !important; }
+        }
     </style>
 </head>
 <body class="flex flex-col">
